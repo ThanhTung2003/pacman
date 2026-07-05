@@ -78,19 +78,22 @@ let score = 0;
 let lives = 3;
 let gameOver = false;
 
-window.onload = function() {
+window.onload = async function() {
     board = document.getElementById("board");
     board.height = boardHeight;
     board.width = boardWidth;
     context = board.getContext("2d"); //used for drawing on the board
 
-    loadImages();
+    await loadImages(); // Wait for all images to load before doing anything
     loadMap();
     for (let ghost of ghosts.values()) {
         const newDirection = directions[Math.floor(Math.random()*4)];
         ghost.updateDirection(newDirection);
     }
-    draw(); // Draw initial state
+
+    // Draw a preview of the map (static, game not started)
+    drawPreview();
+
     document.addEventListener("keyup", movePacman);
 
     // Setup mobile controls
@@ -214,6 +217,7 @@ document.getElementById('play').addEventListener('click', async () => {
   score = 0;
   document.getElementById('lives').innerHTML = lives;
   document.getElementById('score').innerHTML = score;
+  document.getElementById('play').style.display = 'none'; // Hide play button during game
   loadMap();
   resetPositions();
   update();
@@ -222,6 +226,7 @@ document.getElementById('play').addEventListener('click', async () => {
 async function handleGameOver() {
     gameOver = true;
     isPlaying = false;
+    document.getElementById('play').style.display = 'block'; // Show play button again
     setStatus('GAME OVER! You can restart from the Play button.');
 
     if (feeContract) {
@@ -241,26 +246,38 @@ async function handleGameOver() {
 }
 
 function loadImages() {
-    wallImage = new Image();
-    wallImage.src = "/wall.png";
+    // Returns a Promise that resolves when all images are loaded
+    const makeImg = (src) => new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(img); // resolve even on error to not block
+        img.src = src;
+        return img;
+    });
 
-    blueGhostImage = new Image();
-    blueGhostImage.src = "/blueGhost.png";
-    orangeGhostImage = new Image();
-    orangeGhostImage.src = "/orangeGhost.png"
-    pinkGhostImage = new Image()
-    pinkGhostImage.src = "/pinkGhost.png";
-    redGhostImage = new Image()
-    redGhostImage.src = "/redGhost.png";
-
-    pacmanUpImage = new Image();
-    pacmanUpImage.src = "/pacmanUp.png";
-    pacmanDownImage = new Image();
-    pacmanDownImage.src = "/pacmanDown.png";
-    pacmanLeftImage = new Image();
-    pacmanLeftImage.src = "/pacmanLeft.png";
-    pacmanRightImage = new Image();
-    pacmanRightImage.src = "/pacmanRight.png";
+    return Promise.all([
+        makeImg('/wall.png'),
+        makeImg('/blueGhost.png'),
+        makeImg('/orangeGhost.png'),
+        makeImg('/pinkGhost.png'),
+        makeImg('/redGhost.png'),
+        makeImg('/pacmanUp.png'),
+        makeImg('/pacmanDown.png'),
+        makeImg('/pacmanLeft.png'),
+        makeImg('/pacmanRight.png'),
+    ]).then(([
+        wall, blue, orange, pink, red, up, down, left, right
+    ]) => {
+        wallImage = wall;
+        blueGhostImage = blue;
+        orangeGhostImage = orange;
+        pinkGhostImage = pink;
+        redGhostImage = red;
+        pacmanUpImage = up;
+        pacmanDownImage = down;
+        pacmanLeftImage = left;
+        pacmanRightImage = right;
+    });
 }
 
 function loadMap() {
@@ -316,7 +333,28 @@ function update() {
     setTimeout(update, 50); //1000/50 = 20 FPS
 }
 
+// Draw static map preview (before game starts)
+function drawPreview() {
+    if (!context) return;
+    context.clearRect(0, 0, board.width, board.height);
+
+    for (let wall of walls.values()) {
+        context.drawImage(wall.image, wall.x, wall.y, wall.width, wall.height);
+    }
+    context.fillStyle = "white";
+    for (let food of foods.values()) {
+        context.fillRect(food.x, food.y, food.width, food.height);
+    }
+    if (pacman) {
+        context.drawImage(pacman.image, pacman.x, pacman.y, pacman.width, pacman.height);
+    }
+    for (let ghost of ghosts.values()) {
+        context.drawImage(ghost.image, ghost.x, ghost.y, ghost.width, ghost.height);
+    }
+}
+
 function draw() {
+    if (!pacman) return;
     context.clearRect(0, 0, board.width, board.height);
     context.drawImage(pacman.image, pacman.x, pacman.y, pacman.width, pacman.height);
     for (let ghost of ghosts.values()) {
