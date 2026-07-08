@@ -1,13 +1,10 @@
 import { ethers } from 'ethers';
-import { Attribution } from 'ox/erc8021';
 import {
   CONTRACT_ABI,
   CONTRACT_ADDRESS,
   BASE_CHAIN_HEX,
   BASE_RPC,
 } from './contract.js';
-
-const DATA_SUFFIX = Attribution.toDataSuffix({ codes: ['bc_7p2vix5e'] });
 
 let walletProvider = null;
 let walletSigner = null;
@@ -200,7 +197,6 @@ document.getElementById('play').addEventListener('click', async () => {
       setStatus('Waiting for Game Start Fee payment...');
       const fee = await feeContract.gameStartFee();
       const txReq = await feeContract.payGameStart.populateTransaction({ value: fee });
-      txReq.data = txReq.data + DATA_SUFFIX.slice(2);
       const tx = await walletSigner.sendTransaction(txReq);
       await tx.wait();
       setStatus('Game Start Fee paid successfully! Starting game...');
@@ -234,7 +230,6 @@ async function handleGameOver() {
         setStatus('Waiting for Game End Fee payment...');
         const fee = await feeContract.gameEndFee();
         const txReq = await feeContract.payGameEnd.populateTransaction({ value: fee });
-        txReq.data = txReq.data + DATA_SUFFIX.slice(2);
         const tx = await walletSigner.sendTransaction(txReq);
         await tx.wait();
         setStatus('Game End Fee paid successfully!');
